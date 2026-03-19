@@ -20,9 +20,29 @@ interface SpotListProps {
   onRemoveSpot: (dayId: string, spotId: string) => void;
   onDurationChange: (dayId: string, spotId: string, mins: number) => void;
   onReorder: (dayId: string, spots: Spot[]) => void;
+  onStartTimeChange: (dayId: string, startTime: string) => void;
 }
 
-export function SpotList({ day, isReadonly, transitTimes = {}, onRemoveSpot, onDurationChange, onReorder }: SpotListProps) {
+function timeToMins(time: string): number {
+  const [h, m] = time.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function minsToTime(mins: number): string {
+  const h = Math.floor(mins / 60) % 24;
+  const m = mins % 60;
+  return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+}
+
+export function SpotList({ 
+  day, 
+  isReadonly, 
+  transitTimes = {}, 
+  onRemoveSpot, 
+  onDurationChange, 
+  onReorder,
+  onStartTimeChange
+}: SpotListProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
@@ -36,6 +56,27 @@ export function SpotList({ day, isReadonly, transitTimes = {}, onRemoveSpot, onD
     onReorder(day.id, arrayMove(day.spots, oldIndex, newIndex));
   }
 
+  const startTimeMins = timeToMins(day.startTime || "08:00");
+  
+  // 計算每個景點的時間點
+  const schedule: Array<{ arrival: string; departure: string }> = [];
+  let currentMins = startTimeMins;
+
+  for (let i = 0; i < day.spots.length; i++) {
+    const spot = day.spots[i];
+    const arrival = minsToTime(currentMins);
+    currentMins += spot.durationMins;
+    const departure = minsToTime(currentMins);
+    schedule.push({ arrival, departure });
+
+    // 加上到下一個點的路程時間
+    const nextSpot = day.spots[i + 1];
+    if (nextSpot) {
+      const transitMins = transitTimes[`${spot.id}-${nextSpot.id}`] || 0;
+      currentMins += transitMins;
+    }
+  }
+
   let transitTotal = 0;
   for (let i = 0; i < day.spots.length - 1; i++) {
     const key = `${day.spots[i].id}-${day.spots[i+1].id}`;
@@ -47,6 +88,24 @@ export function SpotList({ day, isReadonly, transitTimes = {}, onRemoveSpot, onD
 
   return (
     <div className="flex flex-col gap-3">
+      {/* 行程設定 */}
+      <div className="flex items-center justify-between gap-2 px-1">
+        <label className="flex items-center gap-2 text-xs font-semibold text-surface-500">
+          <Clock size={14} className="text-primary-500" />
+          出發時間
+          {isReadonly ? (
+            <span className="rounded-lg bg-surface-100 px-2 py-1 text-surface-900">{day.startTime || "08:00"}</span>
+          ) : (
+            <input
+              type="time"
+              value={day.startTime || "08:00"}
+              onChange={(e) => onStartTimeChange(day.id, e.target.value)}
+              className="rounded-lg border border-surface-200 bg-white px-2 py-1 text-xs font-medium text-surface-900 outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
+            />
+          )}
+        </label>
+      </div>
+
       {/* 時間摘要 */}
       {day.spots.length > 0 && (
         <div className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary-50 to-primary-100/40 px-4 py-2.5 text-sm font-medium text-primary-700">
@@ -76,6 +135,8 @@ export function SpotList({ day, isReadonly, transitTimes = {}, onRemoveSpot, onD
                       isReadonly={isReadonly}
                       onRemove={onRemoveSpot}
                       onDurationChange={onDurationChange}
+                      arrivalTime={schedule[index]?.arrival}
+                      departureTime={schedule[index]?.departure}
                     />
                     {transitMins != null && (
                       <div className="my-0.5 flex flex-col items-center justify-center text-xs font-medium text-surface-400">

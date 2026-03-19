@@ -27,6 +27,7 @@ function TripEditor() {
     removeSpot,
     updateSpotDuration,
     reorderSpots,
+    updateDayStartTime,
     setTitle,
     createNewItinerary,
     switchItinerary,
@@ -186,6 +187,7 @@ function TripEditor() {
               onRemoveSpot={removeSpot}
               onDurationChange={updateSpotDuration}
               onReorder={reorderSpots}
+              onStartTimeChange={updateDayStartTime}
             />
           )}
         </div>

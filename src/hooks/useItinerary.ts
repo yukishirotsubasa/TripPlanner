@@ -230,6 +230,16 @@ export function useItinerary(initialData: Itinerary | null = null) {
     [updateCurrentItinerary]
   );
 
+  const updateDayStartTime = useCallback(
+    (dayId: string, startTime: string) => {
+      updateCurrentItinerary((prev) => ({
+        ...prev,
+        days: prev.days.map((d) => (d.id === dayId ? { ...d, startTime } : d)),
+      }));
+    },
+    [updateCurrentItinerary]
+  );
+
   const setTitle = useCallback(
     (title: string) => {
       updateCurrentItinerary((prev) => ({ ...prev, title }));
@@ -250,6 +260,7 @@ export function useItinerary(initialData: Itinerary | null = null) {
     removeSpot,
     updateSpotDuration,
     reorderSpots,
+    updateDayStartTime,
     setTitle,
     createNewItinerary,
     switchItinerary,

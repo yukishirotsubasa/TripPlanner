@@ -13,6 +13,7 @@ export interface DayPlan {
   id: string;
   date: string;
   spots: Spot[];
+  startTime?: string;
 }
 
 /** 完整行程表 */
