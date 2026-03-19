@@ -21,3 +21,9 @@ export interface Itinerary {
   title: string;
   days: DayPlan[];
 }
+
+/** 本地儲存狀態集 */
+export interface StorageState {
+  itineraries: Itinerary[];
+  activeItineraryId: string;
+}

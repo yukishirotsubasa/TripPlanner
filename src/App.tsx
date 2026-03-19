@@ -16,6 +16,7 @@ function TripEditor() {
 
   const {
     itinerary,
+    itineraries,
     isReadonly,
     activeDayId,
     activeDay,
@@ -27,6 +28,10 @@ function TripEditor() {
     updateSpotDuration,
     reorderSpots,
     setTitle,
+    createNewItinerary,
+    switchItinerary,
+    deleteItinerary,
+    cloneAsNewItinerary,
   } = useItinerary(sharedItinerary);
 
   const [showCopied, setShowCopied] = useState(false);
@@ -40,6 +45,7 @@ function TripEditor() {
 
   const [directionsResult, setDirectionsResult] = useState<google.maps.DirectionsResult | null>(null);
   const [transitTimes, setTransitTimes] = useState<Record<string, number>>({});
+  const [selectedPlace, setSelectedPlace] = useState<Omit<import("./types").Spot, "id"> | null>(null);
 
   useEffect(() => {
     if (!isLoaded || !activeDay || activeDay.spots.length < 2) {
@@ -82,25 +88,51 @@ function TripEditor() {
     );
   }, [isLoaded, activeDay]);
 
-  async function handleMapClick(lat: number, lng: number) {
+  async function handleMapClick(lat: number, lng: number, placeId?: string) {
     if (isReadonly || !activeDay) return;
+    
+    if (placeId) {
+      const service = new window.google.maps.places.PlacesService(document.createElement('div'));
+      service.getDetails(
+        { placeId, fields: ["name", "formatted_address", "geometry", "place_id"] },
+        (place, status) => {
+          if (status === window.google.maps.places.PlacesServiceStatus.OK && place && place.geometry && place.geometry.location) {
+            setSelectedPlace({
+              placeId: place.place_id || placeId,
+              name: place.name || "未知景點",
+              address: place.formatted_address || "",
+              location: { lat: place.geometry.location.lat(), lng: place.geometry.location.lng() },
+              durationMins: 60,
+            });
+          }
+        }
+      );
+      return;
+    }
+
     const geocoder = new window.google.maps.Geocoder();
     try {
       const response = await geocoder.geocode({ location: { lat, lng } });
       if (response.results[0]) {
         const result = response.results[0];
         const name = result.address_components[0]?.short_name || result.formatted_address.split(',')[0];
-        addSpot(activeDay.id, {
+        setSelectedPlace({
           placeId: result.place_id,
           name: name,
           address: result.formatted_address,
-          location: { lat, lng },
+          location: { lat: result.geometry.location.lat(), lng: result.geometry.location.lng() },
           durationMins: 60,
         });
       }
     } catch (e) {
       console.error("Geocoding failed:", e);
     }
+  }
+
+  function handleAddSelectedPlace(place: Omit<import("./types").Spot, "id">) {
+    if (!activeDay) return;
+    addSpot(activeDay.id, place);
+    setSelectedPlace(null);
   }
 
   function handleShare() {
@@ -114,10 +146,16 @@ function TripEditor() {
   return (
     <div className="flex h-full flex-col">
       <Header
-        title={itinerary.title}
+        title={itinerary?.title ?? ""}
         isReadonly={isReadonly}
         onShare={handleShare}
         onTitleChange={setTitle}
+        itineraries={itineraries}
+        activeItineraryId={itinerary?.id}
+        onSwitchItinerary={switchItinerary}
+        onCreateNewItinerary={createNewItinerary}
+        onCloneAsNew={cloneAsNewItinerary}
+        onDeleteItinerary={deleteItinerary}
       />
 
       <DayTabs
@@ -167,7 +205,14 @@ function TripEditor() {
                 <p className="text-sm">地圖載入失敗，請檢查 API Key 設定</p>
               </div>
             ) : isLoaded ? (
-              <MapView spots={activeDay?.spots ?? []} directions={directionsResult} onMapClick={handleMapClick} />
+              <MapView 
+                spots={activeDay?.spots ?? []} 
+                directions={directionsResult} 
+                onMapClick={handleMapClick} 
+                selectedPlace={selectedPlace}
+                onCloseInfoWindow={() => setSelectedPlace(null)}
+                onAddPlace={handleAddSelectedPlace}
+              />
             ) : (
               <div className="flex h-full items-center justify-center bg-surface-100">
                 <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary-400 border-t-transparent" />
