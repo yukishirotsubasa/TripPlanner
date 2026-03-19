@@ -12,7 +12,7 @@ function createDefaultItinerary(): Itinerary {
   const dayId = generateId();
   return {
     id: generateId(),
-    title: format(new Date(), 'yyyy/MM/dd'),
+    title: format(new Date(), 'yyyy/MM/dd HH:mm'),
     days: [{ id: dayId, date: "第 1 天", spots: [] }],
   };
 }
@@ -137,7 +137,7 @@ export function useItinerary(initialData: Itinerary | null = null) {
     const newItin: Itinerary = {
       ...readonlyData,
       id: generateId(),
-      title: `${readonlyData.title} (匯入)`,
+      title: format(new Date(), 'yyyy/MM/dd HH:mm'),
     };
     setStorageState((prev) => {
       const updated = {
