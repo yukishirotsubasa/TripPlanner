@@ -34,6 +34,12 @@ function minsToTime(mins: number): string {
   return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
 }
 
+function formatDuration(mins: number): string {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return h > 0 ? `${h} 小時 ${m} 分鐘` : `${m} 分鐘`;
+}
+
 export function SpotList({ 
   day, 
   isReadonly, 
@@ -108,9 +114,25 @@ export function SpotList({
 
       {/* 時間摘要 */}
       {day.spots.length > 0 && (
-        <div className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary-50 to-primary-100/40 px-4 py-2.5 text-sm font-medium text-primary-700">
-          <Clock size={15} />
-          {day.spots.length} 個景點 · 預計 {Math.floor(totalMins / 60)} 小時 {totalMins % 60} 分鐘
+        <div className="flex flex-col gap-2 rounded-xl bg-gradient-to-r from-primary-50 to-primary-100/40 px-4 py-3 text-sm font-medium text-primary-700">
+          <div className="flex items-center gap-2">
+            <Clock size={15} />
+            <span>{day.spots.length} 個景點</span>
+          </div>
+          <div className="grid grid-cols-1 gap-1 text-xs border-t border-primary-200/50 pt-2 opacity-90">
+            <div className="flex justify-between">
+              <span>預計總時間</span>
+              <span>{formatDuration(totalMins)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>預計交通時間</span>
+              <span>{formatDuration(transitTotal)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>預計景點時間</span>
+              <span>{formatDuration(spotsTotal)}</span>
+            </div>
+          </div>
         </div>
       )}
 
